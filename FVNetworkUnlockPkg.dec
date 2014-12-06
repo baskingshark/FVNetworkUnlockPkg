@@ -1,0 +1,57 @@
+## @file FVNetworkUnlockPkg.dec
+#
+# Copyright (c) 2014, baskingshark
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice,
+#    this list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
+#
+##
+
+[Defines]
+  DEC_SPECIFICATION              = 0x00010005
+  PACKAGE_NAME                   = FVNetworkUnlockPkg
+  PACKAGE_GUID                   = 1F264CED-F415-46B4-B0D8-3345C2A5CEA3
+  PACKAGE_VERSION                = 1.00
+
+[Includes]
+  Include
+
+[LibraryClasses]
+
+[Guids]
+
+[Ppis]
+
+[Protocols]
+  ## Include/Protocol/ConsoleControl.h
+  gEfiConsoleControlProtocolGuid = { 0xF42F7782, 0x012E, 0x4C12, {0x99, 0x56, 0x49, 0xF9, 0x43, 0x04, 0xF7, 0x21} }
+  ## Include/Protocol/KeyState.h
+  gKeyStateProtocolGuid          = { 0x5b213447, 0x6e73, 0x4901, {0xa4, 0xf1, 0xb8, 0x64, 0xf3, 0xb7, 0xa1, 0x72} }
+
+[PcdsFeatureFlag]
+
+[PcdsFixedAtBuild,PcdsPatchableInModule]
+
+[PcdsFixedAtBuild, PcdsPatchableInModule, PcdsDynamic, PcdsDynamicEx]
+
+[PcdsPatchableInModule, PcdsFixedAtBuild]
