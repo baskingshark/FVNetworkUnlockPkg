@@ -49,6 +49,7 @@
   FixedTextInput.c
   FV2.c
   KeyboardHook.c
+  SmBios.c
 
 [Packages]
   FVNetworkUnlockPkg/FVNetworkUnlockPkg.dec
