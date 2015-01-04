@@ -11,8 +11,10 @@ particular, in a corporate environment where users are authenticated with AD,
 an automated way of unlocking FileVault may be required.
 
 This boot loader is designed to be pulled over the network and it locates and
-runs the standard Apple boot.efi.  The password is currently pulled from the
-**password** file in the same location as the boot loader.
+runs the standard Apple boot.efi.  The password is currently pulled from a file
+in the same location as the boot loader.  The name of the password file is
+based on the serial number of the machine (any invalid characters are replaced
+with '_').
 
 Requirements
 ------------
@@ -25,10 +27,6 @@ Mac must also be set to boot from the network (using something like
 
 Limitations
 -----------
-* The current implementation uses a hardcoded name for the password file.  This
-means that if multiple Macs are booted from the same server then they must use
-the same password.
-
 * When booting the mac, if there is a choice of user to unlock the disk, the
 boot loader fails.  Ideally, no users should be allowed to unlock the disk and
 a disk password should be.  The simplest way to do this is to run the following
