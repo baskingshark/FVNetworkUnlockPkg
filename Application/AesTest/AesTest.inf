@@ -1,6 +1,6 @@
-## @file FVNetworkUnlockPkg.dec
+## @file AesTest.inf
 #
-# Copyright (c) 2014, baskingshark
+# Copyright (c) 2015, baskingshark
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -28,31 +28,35 @@
 ##
 
 [Defines]
-  DEC_SPECIFICATION              = 0x00010005
-  PACKAGE_NAME                   = FVNetworkUnlockPkg
-  PACKAGE_GUID                   = 1F264CED-F415-46B4-B0D8-3345C2A5CEA3
-  PACKAGE_VERSION                = 1.00
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = AESTest
+  FILE_GUID                      = 3FF05CF3-17B5-449F-B720-8951944EE597
+  MODULE_TYPE                    = UEFI_APPLICATION
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = UefiMain
 
-[Includes]
-  Include
+#
+# The following information is for reference only and not required by the build
+# tools.
+#
+#  VALID_ARCHITECTURES           = IA32 X64
+#
+
+[Sources]
+  AesTest.c
+
+[Packages]
+  FVNetworkUnlockPkg/FVNetworkUnlockPkg.dec
+  MdePkg/MdePkg.dec
 
 [LibraryClasses]
   AesLib
+  BaseMemoryLib
+  UefiApplicationEntryPoint
+  UefiLib
 
 [Guids]
 
-[Ppis]
-
 [Protocols]
-  ## Include/Protocol/ConsoleControl.h
-  gEfiConsoleControlProtocolGuid = { 0xF42F7782, 0x012E, 0x4C12, {0x99, 0x56, 0x49, 0xF9, 0x43, 0x04, 0xF7, 0x21} }
-  ## Include/Protocol/KeyState.h
-  gKeyStateProtocolGuid          = { 0x5b213447, 0x6e73, 0x4901, {0xa4, 0xf1, 0xb8, 0x64, 0xf3, 0xb7, 0xa1, 0x72} }
 
-[PcdsFeatureFlag]
-
-[PcdsFixedAtBuild,PcdsPatchableInModule]
-
-[PcdsFixedAtBuild, PcdsPatchableInModule, PcdsDynamic, PcdsDynamicEx]
-
-[PcdsPatchableInModule, PcdsFixedAtBuild]
+[Pcd]

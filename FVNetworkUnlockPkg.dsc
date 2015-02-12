@@ -41,13 +41,14 @@
   FVNetworkUnlockPkg/Application/FVNetworkUnlock/FVNetworkUnlock.inf
 !ifdef OPTIONAL
   FVNetworkUnlockPkg/Application/KeyState/KeyState.inf
+  FVNetworkUnlockPkg/Application/AesTest/AesTest.inf
 !endif
 
 [LibraryClasses]
   #
   # Local libraries
   #
-
+  AesLib|FVNetworkUnlockPkg/Library/Aes/Aes.inf
   #
   # Entry Point Libraries
   #
