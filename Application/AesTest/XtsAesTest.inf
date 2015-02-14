@@ -1,4 +1,4 @@
-## @file Aes.inf
+## @file XtsAesTest.inf
 #
 # Copyright (c) 2015, baskingshark
 # All rights reserved.
@@ -29,20 +29,34 @@
 
 [Defines]
   INF_VERSION                    = 0x00010005
-  BASE_NAME                      = AesLib
-  FILE_GUID                      = FFBC032F-35D7-42CE-A306-B3F33815D9FE
-  MODULE_TYPE                    = UEFI_DRIVER
+  BASE_NAME                      = XtsAesTest
+  FILE_GUID                      = 080EFE7A-210D-4BAE-A996-1CC59C193223
+  MODULE_TYPE                    = UEFI_APPLICATION
   VERSION_STRING                 = 1.0
-  LIBRARY_CLASS                  = AesLib
+  ENTRY_POINT                    = UefiMain
+
+#
+# The following information is for reference only and not required by the build
+# tools.
+#
+#  VALID_ARCHITECTURES           = IA32 X64
+#
+
+[Sources]
+  XtsAesTest.c
 
 [Packages]
+  FVNetworkUnlockPkg/FVNetworkUnlockPkg.dec
   MdePkg/MdePkg.dec
 
 [LibraryClasses]
+  AesLib
   BaseMemoryLib
+  UefiApplicationEntryPoint
+  UefiLib
 
-[Sources]
-  AesGeneric.c
-  XtsAes.c
+[Guids]
 
 [Protocols]
+
+[Pcd]

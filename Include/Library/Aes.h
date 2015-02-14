@@ -67,4 +67,54 @@ InvAesCipher(IN  UINTN CONST Keysize,
              IN  UINT8 CONST Key[static Keysize/8],
              OUT UINT8       Out[16]);
 
+/**
+ * XTS-AES encryption.
+ *
+ * @param KeySize   Size of the key in bits - must be 256 or 512.
+ * @param Key       Pointer to the key - the first half is used to encrypt the
+ *                  data, while the second half is used to encrypt the initial
+ *                  tweak.
+ * @param IV        Pointer to the tweak IV.
+ * @param Size      Size of the data (in bytes) - must be at least 16 bytes.
+ * @param Src       Pointer to the data.
+ * @param Dest      Pointer to the location to store the encrypted data (this
+ *                  may be the same as Src).
+ *
+ * @retval  EFI_SUCCESS             The data was encrypted.
+ * @retval  EFI_INVALID_PARAMETER   One or more of the parameters were invalid.
+ */
+EFI_STATUS
+EFIAPI
+XtsAesCipher(IN  UINTN CONST KeySize,
+             IN  UINT8 CONST Key[static KeySize/8],
+             IN  UINT8 CONST IV[static 16],
+             IN  UINTN CONST Size,
+             IN  UINT8 CONST Src[static Size],
+             OUT UINT8       Dest[static Size]);
+
+/**
+ * XTS-AES decryption.
+ *
+ * @param KeySize   Size of the key in bits - must be 256 or 512.
+ * @param Key       Pointer to the key - the first half is used to encrypt the
+ *                  data, while the second half is used to encrypt the initial
+ *                  tweak.
+ * @param IV        Pointer to the tweak IV.
+ * @param Size      Size of the data (in bytes) - must be at least 16 bytes.
+ * @param Src       Pointer to the encrypted data.
+ * @param Dest      Pointer to the location to store the decrypted data (this
+ *                  may be the same as Src).
+ *
+ * @retval  EFI_SUCCESS             The data was decrypted.
+ * @retval  EFI_INVALID_PARAMETER   One or more of the parameters were invalid.
+ */
+EFI_STATUS
+EFIAPI
+InvXtsAesCipher(IN  UINTN CONST KeySize,
+                IN  UINT8 CONST Key[static KeySize/8],
+                IN  UINT8 CONST IV[static 16],
+                IN  UINTN CONST Size,
+                IN  UINT8 CONST Src[static Size],
+                OUT UINT8       Dest[static Size]);
+
 #endif

@@ -42,6 +42,7 @@
 !ifdef OPTIONAL
   FVNetworkUnlockPkg/Application/KeyState/KeyState.inf
   FVNetworkUnlockPkg/Application/AesTest/AesTest.inf
+  FVNetworkUnlockPkg/Application/AesTest/XtsAesTest.inf
 !endif
 
 [LibraryClasses]
