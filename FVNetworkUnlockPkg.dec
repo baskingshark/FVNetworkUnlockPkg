@@ -38,6 +38,7 @@
 
 [LibraryClasses]
   AesLib
+  FileSystemHookLib
 
 [Guids]
 

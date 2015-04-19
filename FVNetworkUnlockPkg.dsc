@@ -50,6 +50,7 @@
   # Local libraries
   #
   AesLib|FVNetworkUnlockPkg/Library/Aes/Aes.inf
+  FileSystemHookLib|FVNetworkUnlockPkg/Library/FileSystemHook/FileSystemHook.inf
   #
   # Entry Point Libraries
   #
