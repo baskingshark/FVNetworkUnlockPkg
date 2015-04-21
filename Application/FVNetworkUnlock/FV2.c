@@ -295,31 +295,31 @@ HasBootLoader(IN EFI_HANDLE Handle)
 }
 
 /**
-  Locate FV2 boot loaders.
- 
-  @param  BootLoaderCount   Location to store the number of boot loaders found.
-  @param  BootLoaders       Location to store pointer to list of boot loaders.
- 
+  Locate FV2 volumes.
+
+  @param  VolumeCount   Location to store the number of volumes found.
+  @param  Volumes       Location to store pointer to list of volumes.
+
   @retval EFI_SUCCESS             The search was successful.
-  @retval EFI_NOT_FOUND           No boot loaders were found.
+  @retval EFI_NOT_FOUND           No volumes were found.
   @retval EFI_OUT_OF_RESOURCES    There is not enough memory to complete the
                                   search.
   @retval EFI_INVALID_PARAMETER   One or more of the parameters was invalid.
  */
 EFI_STATUS
 EFIAPI
-LocateFV2BootLoaders(OUT UINTN        *BootLoaderCount,
-                     OUT BOOT_LOADER **BootLoaders)
+LocateFV2Volumes(OUT UINTN       *VolumeCount,
+                 OUT FV2_VOLUME **Volumes)
 {
-  BOOT_LOADER *Loaders;
-  BOOT_LOADER *Loader;
-  EFI_HANDLE  *Handles;
-  EFI_STATUS   Status;
-  UINTN        HandleCount;
-  UINTN        BootCount;
-  UINTN        Index;
+  FV2_VOLUME *Loaders;
+  FV2_VOLUME *Loader;
+  EFI_HANDLE *Handles;
+  EFI_STATUS  Status;
+  UINTN       HandleCount;
+  UINTN       BootCount;
+  UINTN       Index;
 
-  if(!BootLoaderCount || !BootLoaders)
+  if(!VolumeCount || !Volumes)
     return EFI_INVALID_PARAMETER;
 
   Status = gBS->LocateHandleBuffer(ByProtocol,
@@ -338,16 +338,17 @@ LocateFV2BootLoaders(OUT UINTN        *BootLoaderCount,
     }
     // Allocate struct of boot loaders
     Status = gBS->AllocatePool(EfiBootServicesData,
-                               BootCount * sizeof(BOOT_LOADER),
+                               BootCount * sizeof(FV2_VOLUME),
                                (VOID**)&Loaders);
     if(!EFI_ERROR(Status)) {
       for(BootCount = Index = 0; Index < HandleCount; Index++) {
         if(Handles[Index] != NULL) {
           Loader = Loaders + BootCount;
-          Loader->VolumeHandle = Handles[Index];
-          Loader->BootLoader = FileDevicePath(Handles[Index], BOOT_LOADER_NAME);
-          if(!Loader->BootLoader) {
-            FreeFV2BootLoaders(BootCount, Loaders);
+          Loader->BootVolumeHandle = Handles[Index];
+          Loader->BootLoaderDevPath = FileDevicePath(Handles[Index],
+                                                     BOOT_LOADER_NAME);
+          if(!Loader->BootLoaderDevPath) {
+            FreeFV2Volumes(BootCount, Loaders);
             Status = EFI_OUT_OF_RESOURCES;
             break;
           }
@@ -356,8 +357,8 @@ LocateFV2BootLoaders(OUT UINTN        *BootLoaderCount,
         }
       }
       if(BootCount) {
-        *BootLoaderCount = BootCount;
-        *BootLoaders = Loaders;
+        *VolumeCount = BootCount;
+        *Volumes = Loaders;
       }
       else
         Status = EFI_NOT_FOUND;
@@ -372,19 +373,17 @@ LocateFV2BootLoaders(OUT UINTN        *BootLoaderCount,
 
 /**
   Free list of FV2 boot loaders.
- 
-  @param  BootLoaderCount   Number of boot loaders returned by
-                            LocateFV2BootLoaders.
-  @param  BootLoaders       Pointer to boot loaders returned by
-                            LocateFV2BootLoaders.
+
+  @param  VolumeCount   Number of volumes returned by LocateFV2Volumes.
+  @param  Volumes       Pointer to volumes returned by LocateFV2Volumes.
  */
 VOID
 EFIAPI
-FreeFV2BootLoaders(IN UINTN        BootLoaderCount,
-                   IN BOOT_LOADER *BootLoaders)
+FreeFV2Volumes(IN UINTN       VolumeCount,
+               IN FV2_VOLUME *Volumes)
 {
   UINTN Index;
-  for(Index = 0; Index < BootLoaderCount; Index++)
-    gBS->FreePool(BootLoaders[Index].BootLoader);
-  gBS->FreePool(BootLoaders);
+  for(Index = 0; Index < VolumeCount; Index++)
+    gBS->FreePool(Volumes[Index].BootLoaderDevPath);
+  gBS->FreePool(Volumes);
 }

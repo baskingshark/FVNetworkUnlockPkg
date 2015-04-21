@@ -29,40 +29,39 @@
 #define __FV2_H__
 
 #include <Uefi.h>
+#include <Protocol/DevicePath.h>
 
-typedef struct _BOOT_LOADER {
-  EFI_HANDLE                VolumeHandle;
-  EFI_DEVICE_PATH_PROTOCOL *BootLoader;
-} BOOT_LOADER;
+typedef struct _FV2_VOLUME {
+  EFI_HANDLE                BootVolumeHandle;
+  EFI_DEVICE_PATH_PROTOCOL *BootLoaderDevPath;
+} FV2_VOLUME;
 
 /**
-  Locate FV2 boot loaders.
+  Locate FV2 volumes.
 
-  @param  BootLoaderCount   Location to store the number of boot loaders found.
-  @param  BootLoaders       Location to store pointer to list of boot loaders.
+  @param  VolumeCount   Location to store the number of volumes found.
+  @param  Volumes       Location to store pointer to list of volumes.
 
   @retval EFI_SUCCESS             The search was successful.
-  @retval EFI_NOT_FOUND           No boot loaders were found.
+  @retval EFI_NOT_FOUND           No volumes were found.
   @retval EFI_OUT_OF_RESOURCES    There is not enough memory to complete the
                                   search.
   @retval EFI_INVALID_PARAMETER   One or more of the parameters was invalid.
  */
 EFI_STATUS
 EFIAPI
-LocateFV2BootLoaders(OUT UINTN        *BootLoaderCount,
-                     OUT BOOT_LOADER **BootLoaders);
+LocateFV2Volumes(OUT UINTN       *VolumeCount,
+                 OUT FV2_VOLUME **Volumes);
 
 /**
   Free list of FV2 boot loaders.
 
-  @param  BootLoaderCount   Number of boot loaders returned by
-                            LocateFV2BootLoaders.
-  @param  BootLoaders       Pointer to boot loaders returned by
-                            LocateFV2BootLoaders.
+  @param  VolumeCount   Number of volumes returned by LocateFV2Volumes.
+  @param  Volumes       Pointer to volumes returned by LocateFV2Volumes.
  */
 VOID
 EFIAPI
-FreeFV2BootLoaders(IN UINTN        BootLoaderCount,
-                   IN BOOT_LOADER *BootLoaders);
+FreeFV2Volumes(IN UINTN       VolumeCount,
+               IN FV2_VOLUME *Volumes);
 
 #endif

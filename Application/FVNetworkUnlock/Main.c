@@ -183,17 +183,17 @@ UefiMain(IN EFI_HANDLE        ImageHandle,
   EFI_STATUS        Status;
   EFI_LOADED_IMAGE *LoadedImage;
   EFI_HANDLE        LoaderHandle;
-  BOOT_LOADER      *BootLoaders;
-  UINTN             BootLoaderCount;
+  FV2_VOLUME       *Volumes;
+  UINTN             VolumeCount;
   UINTN             FileSize;
   CHAR8            *FileBuffer;
 
   SwitchToTextMode();
   Print(L"Starting ...\n");
   ConnectControllers();
-  Status = LocateFV2BootLoaders(&BootLoaderCount, &BootLoaders);
+  Status = LocateFV2Volumes(&VolumeCount, &Volumes);
   if(!EFI_ERROR(Status)) {
-    Print(L"Got %d boot loaders\n", BootLoaderCount);
+    Print(L"Got %d boot loaders\n", Volumes);
     Status = gBS->OpenProtocol(gImageHandle,
                                &gEfiLoadedImageProtocolGuid,
                                (VOID**)&LoadedImage,
@@ -213,7 +213,7 @@ UefiMain(IN EFI_HANDLE        ImageHandle,
         if(!EFI_ERROR(Status)) {
           Status = gBS->LoadImage(FALSE,
                                   gImageHandle,
-                                  BootLoaders[0].BootLoader,
+                                  Volumes[0].BootLoaderDevPath,
                                   NULL,
                                   0,
                                   &LoaderHandle);
@@ -235,7 +235,7 @@ UefiMain(IN EFI_HANDLE        ImageHandle,
     }
     else
       Print(L"Failed to open LOADED_IMAGE_PROTOCOL - %r\n", Status);
-    FreeFV2BootLoaders(BootLoaderCount, BootLoaders);
+    FreeFV2Volumes(VolumeCount, Volumes);
   }
   else
     Print(L"Failed to locate next boot loader - %r\n", Status);
