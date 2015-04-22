@@ -32,6 +32,7 @@
 #include <Protocol/DevicePath.h>
 
 typedef struct _FV2_VOLUME {
+  EFI_HANDLE                CSVolumeHandle;
   EFI_HANDLE                BootVolumeHandle;
   EFI_DEVICE_PATH_PROTOCOL *BootLoaderDevPath;
 } FV2_VOLUME;

@@ -187,6 +187,54 @@ LocatePartition(IN CONST EFI_DEVICE_PATH_PROTOCOL *DriveDevicePath,
 }
 
 /**
+  Locate the previous partition on the disk.
+ 
+  The device path of the disk is searched for a Media Device Path/Hard Drive
+  component to identify the current partition number.  Everything before this
+  is used to identify the physical drive.
+ 
+  @param  VolumeHandle  Handle of the volume.
+ 
+  @return The handle to the partition, or NULL if the partition could not be
+          found.
+ */
+STATIC
+EFI_HANDLE
+EFIAPI
+LocatePreviousPartition(IN EFI_HANDLE VolumeHandle)
+{
+  EFI_DEVICE_PATH_PROTOCOL *VolumeDevicePath;
+  EFI_DEVICE_PATH_PROTOCOL *DriveDevicePath;
+  EFI_DEVICE_PATH_PROTOCOL *CurrentNode;
+  HARDDRIVE_DEVICE_PATH    *HardDrive;
+  EFI_HANDLE                Result = FALSE;
+
+  VolumeDevicePath = DevicePathFromHandle(VolumeHandle);
+  if(VolumeDevicePath) {
+    DriveDevicePath = DuplicateDevicePath(VolumeDevicePath);
+    if(DriveDevicePath) {
+      for(CurrentNode = DriveDevicePath;
+          !IsDevicePathEnd(CurrentNode);
+          CurrentNode = NextDevicePathNode(CurrentNode)) {
+        if(MEDIA_DEVICE_PATH == DevicePathType(CurrentNode) &&
+           MEDIA_HARDDRIVE_DP == DevicePathSubType(CurrentNode)) {
+          HardDrive = (HARDDRIVE_DEVICE_PATH*)CurrentNode;
+          if(MBR_TYPE_EFI_PARTITION_TABLE_HEADER == HardDrive->MBRType &&
+             HardDrive->PartitionNumber > 1) {
+            SetDevicePathEndNode(CurrentNode);
+            Result = LocatePartition(DriveDevicePath,
+                                     HardDrive->PartitionNumber - 1);
+            break;
+          }
+        }
+      }
+      gBS->FreePool(DriveDevicePath);
+    }
+  }
+  return Result;
+}
+
+/**
   Check whether the given handle is a FV2 Boot (Apple Recovery) partition.
  
   A handle is considered to be a FV2 boot partition if it is a disk partition
@@ -203,36 +251,8 @@ BOOLEAN
 EFIAPI
 IsFV2BootPartition(IN EFI_HANDLE Handle)
 {
-  EFI_DEVICE_PATH_PROTOCOL *HandleDevicePath;
-  EFI_DEVICE_PATH_PROTOCOL *DriveDevicePath;
-  EFI_DEVICE_PATH_PROTOCOL *CurrentNode;
-  HARDDRIVE_DEVICE_PATH    *HardDrive;
-  UINT32                    PartitionNumber;
-  BOOLEAN                   Result = FALSE;
-
-  HandleDevicePath = DevicePathFromHandle(Handle);
-  if(HandleDevicePath) {
-    DriveDevicePath = DuplicateDevicePath(HandleDevicePath);
-    if(DriveDevicePath) {
-      for(CurrentNode = DriveDevicePath;
-          !IsDevicePathEnd(CurrentNode);
-          CurrentNode = NextDevicePathNode(CurrentNode)) {
-        if(DevicePathType(CurrentNode) == MEDIA_DEVICE_PATH &&
-           DevicePathSubType(CurrentNode) == MEDIA_HARDDRIVE_DP) {
-          HardDrive = (HARDDRIVE_DEVICE_PATH*)CurrentNode;
-          if(HardDrive->MBRType == MBR_TYPE_EFI_PARTITION_TABLE_HEADER) {
-            PartitionNumber = HardDrive->PartitionNumber;
-            SetDevicePathEndNode(CurrentNode);
-            Result = CheckFV2Handle(LocatePartition(DriveDevicePath,
-                                                    PartitionNumber-1));
-            break;
-          }
-        }
-      }
-      gBS->FreePool(DriveDevicePath);
-    }
-  }
-  return Result;
+  EFI_HANDLE CSVolumeHandle = LocatePreviousPartition(Handle);
+  return CSVolumeHandle && CheckFV2Handle(CSVolumeHandle);
 }
 
 /**
@@ -295,6 +315,46 @@ HasBootLoader(IN EFI_HANDLE Handle)
 }
 
 /**
+  Initialize a FV2_VOLUME structure.
+ 
+  @param  BootVolumeHandle  Handle of the partition containing the boot loader.
+  @param  FV2VolumeInfo     Pointer to the FV2_VOLUME to initialize.
+ 
+  @retval EFI_SUCCESS           The structure was initialized.
+  @retval EFI_NOT_FOUND         The handle of the Core Storage volume could not
+                                be found.
+  @retval EFI_OUT_OF_RESOURCES  There were insufficient resources to initialize
+                                the structure.
+ */
+STATIC
+EFI_STATUS
+EFIAPI
+InitFV2VolumeInfo(IN EFI_HANDLE  BootVolumeHandle,
+                  IN FV2_VOLUME *FV2VolumeInfo)
+{
+  EFI_STATUS Status;
+
+  gBS->SetMem(FV2VolumeInfo, sizeof(*FV2VolumeInfo), 0);
+  FV2VolumeInfo->CSVolumeHandle = LocatePreviousPartition(BootVolumeHandle);
+  if(FV2VolumeInfo->CSVolumeHandle) {
+    FV2VolumeInfo->BootVolumeHandle  = BootVolumeHandle;
+    FV2VolumeInfo->BootLoaderDevPath = FileDevicePath(BootVolumeHandle,
+                                                      BOOT_LOADER_NAME);
+    if(!FV2VolumeInfo->BootLoaderDevPath) {
+      FV2VolumeInfo->CSVolumeHandle = NULL;
+      FV2VolumeInfo->BootVolumeHandle = NULL;
+      Status = EFI_OUT_OF_RESOURCES;
+    }
+    else
+      Status = EFI_SUCCESS;
+  }
+  else
+    Status = EFI_NOT_FOUND;
+
+  return Status;
+}
+
+/**
   Locate FV2 volumes.
 
   @param  VolumeCount   Location to store the number of volumes found.
@@ -312,7 +372,6 @@ LocateFV2Volumes(OUT UINTN       *VolumeCount,
                  OUT FV2_VOLUME **Volumes)
 {
   FV2_VOLUME *Loaders;
-  FV2_VOLUME *Loader;
   EFI_HANDLE *Handles;
   EFI_STATUS  Status;
   UINTN       HandleCount;
@@ -331,7 +390,8 @@ LocateFV2Volumes(OUT UINTN       *VolumeCount,
   if(!EFI_ERROR(Status)) {
     for(BootCount = Index = 0; Index < HandleCount; Index++) {
       Print(L"Checking FS %d\n", Index);
-      if(HasBootLoader(Handles[Index]) && IsFV2BootPartition(Handles[Index]))
+      if(HasBootLoader(Handles[Index]) &&
+         IsFV2BootPartition(Handles[Index]))
         BootCount++;
       else
         Handles[Index] = NULL;
@@ -343,13 +403,9 @@ LocateFV2Volumes(OUT UINTN       *VolumeCount,
     if(!EFI_ERROR(Status)) {
       for(BootCount = Index = 0; Index < HandleCount; Index++) {
         if(Handles[Index] != NULL) {
-          Loader = Loaders + BootCount;
-          Loader->BootVolumeHandle = Handles[Index];
-          Loader->BootLoaderDevPath = FileDevicePath(Handles[Index],
-                                                     BOOT_LOADER_NAME);
-          if(!Loader->BootLoaderDevPath) {
+          Status = InitFV2VolumeInfo(Handles[Index], Loaders + BootCount);
+          if(EFI_ERROR(Status)) {
             FreeFV2Volumes(BootCount, Loaders);
-            Status = EFI_OUT_OF_RESOURCES;
             break;
           }
           else
