@@ -65,4 +65,23 @@ EFIAPI
 FreeFV2Volumes(IN UINTN       VolumeCount,
                IN FV2_VOLUME *Volumes);
 
+/**
+  Get the XTS-AES key used by the EncryptedRoot.plist.wipekey file.
+
+  @param  FV2Volume   Pointer to the FV2 volume to get the key from.
+  @param  KeySize     On entry, size of the Key buffer in bytes.
+                      On exit, the size of the Key in bytes.
+  @param  Key         Buffer in which to store the key.
+
+  @retval EFI_SUCCESS           The key was copied to the buffer successfully,
+  @retval EFI_BUFFER_TOO_SMALL  The buffer was too small to store the key.
+                                The required size is returned in KeySize.
+  @retval EFI_NOT_FOUND         The key could not be found/read.
+ */
+EFI_STATUS
+EFIAPI
+GetXtsAesKey(IN     FV2_VOLUME *FV2Volume,
+             IN OUT UINTN      *KeySize,
+             IN     UINT8      *Key);
+
 #endif

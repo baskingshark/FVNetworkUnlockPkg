@@ -443,3 +443,67 @@ FreeFV2Volumes(IN UINTN       VolumeCount,
     gBS->FreePool(Volumes[Index].BootLoaderDevPath);
   gBS->FreePool(Volumes);
 }
+
+/**
+  Get the XTS-AES key used by the EncryptedRoot.plist.wipekey file.
+ 
+  @param  FV2Volume   Pointer to the FV2 volume to get the key from.
+  @param  KeySize     On entry, size of the Key buffer in bytes.
+                      On exit, the size of the Key in bytes.
+  @param  Key         Buffer in which to store the key.
+ 
+  @retval EFI_SUCCESS           The key was copied to the buffer successfully,
+  @retval EFI_BUFFER_TOO_SMALL  The buffer was too small to store the key.
+                                The required size is returned in KeySize.
+  @retval EFI_NOT_FOUND         The key could not be found/read.
+ */
+EFI_STATUS
+EFIAPI
+GetXtsAesKey(IN     FV2_VOLUME *FV2Volume,
+             IN OUT UINTN      *KeySize,
+             IN     UINT8      *Key)
+{
+  EFI_BLOCK_IO_PROTOCOL *Blk;
+  EFI_STATUS             Status;
+  UINTN                  Size;
+  UINTN                  Idx;
+  UINT8                 *BlockBuffer;
+
+  if(!FV2Volume)
+    return EFI_INVALID_PARAMETER;
+
+  Status = gBS->OpenProtocol(FV2Volume->CSVolumeHandle,
+                             &gEfiBlockIoProtocolGuid,
+                             (VOID**)&Blk,
+                             gImageHandle,
+                             NULL,
+                             EFI_OPEN_PROTOCOL_GET_PROTOCOL);
+  if(!EFI_ERROR(Status)) {
+    Status = gBS->AllocatePool(EfiBootServicesData,
+                               Blk->Media->BlockSize,
+                               (VOID**)&BlockBuffer);
+    if(!EFI_ERROR(Status)) {
+      Status = Blk->ReadBlocks(Blk,
+                               Blk->Media->MediaId,
+                               0,
+                               Blk->Media->BlockSize,
+                               BlockBuffer);
+      if(!EFI_ERROR(Status)) {
+        // Key Size is at offset 168.
+        // Should always be 16, but use on-disk value just in case.
+        // Size is doubled to account for both keys.
+        Size = (*(UINT32*)(BlockBuffer + 168)) * 2;
+        if(*KeySize >= Size)
+          for(Idx = 0; Idx < Size; Idx++)
+            Key[Idx] = *(BlockBuffer + Idx + 176);
+        else
+          Status = EFI_BUFFER_TOO_SMALL;
+        *KeySize = Size;
+        // Zero buffer ...
+        gBS->SetMem(BlockBuffer, Blk->Media->BlockSize, 0);
+      }
+      gBS->FreePool(BlockBuffer);
+    }
+  }
+  return Status;
+}
