@@ -33,6 +33,7 @@
 #include <Protocol/LoadedImage.h>
 #include "FileLoad.h"
 #include "FV2.h"
+#include "FV2Hook.h"
 #include "KeyboardHook.h"
 #include "SmBios.h"
 
@@ -187,6 +188,7 @@ UefiMain(IN EFI_HANDLE        ImageHandle,
   UINTN             VolumeCount;
   UINTN             FileSize;
   CHAR8            *FileBuffer;
+  UINTN             Idx;
 
   SwitchToTextMode();
   Print(L"Starting ...\n");
@@ -194,6 +196,8 @@ UefiMain(IN EFI_HANDLE        ImageHandle,
   Status = LocateFV2Volumes(&VolumeCount, &Volumes);
   if(!EFI_ERROR(Status)) {
     Print(L"Got %d boot loaders\n", Volumes);
+    for(Idx = 0; Idx < VolumeCount; Idx++)
+      HookVolume(&Volumes[Idx]);
     Status = gBS->OpenProtocol(gImageHandle,
                                &gEfiLoadedImageProtocolGuid,
                                (VOID**)&LoadedImage,
