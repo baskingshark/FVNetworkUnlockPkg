@@ -48,6 +48,8 @@
   FixedKeyState.c
   FixedTextInput.c
   FV2.c
+  FV2Hook.c
+  FV2PlistFilter.c
   KeyboardHook.c
   SmBios.c
 
