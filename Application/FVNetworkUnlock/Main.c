@@ -195,7 +195,7 @@ UefiMain(IN EFI_HANDLE        ImageHandle,
   ConnectControllers();
   Status = LocateFV2Volumes(&VolumeCount, &Volumes);
   if(!EFI_ERROR(Status)) {
-    Print(L"Got %d boot loaders\n", Volumes);
+    Print(L"Got %d boot loaders\n", VolumeCount);
     for(Idx = 0; Idx < VolumeCount; Idx++)
       HookVolume(&Volumes[Idx]);
     Status = gBS->OpenProtocol(gImageHandle,
