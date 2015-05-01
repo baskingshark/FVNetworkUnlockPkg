@@ -27,10 +27,11 @@ Mac must also be set to boot from the network (using something like
 
 Limitations
 -----------
-* When booting the mac, if there is a choice of user to unlock the disk, the
-boot loader fails.  Ideally, no users should be allowed to unlock the disk and
-a disk password should be.  The simplest way to do this is to run the following
-on a decrypted disk: `diskutil cs convert / -stdinpassphrase`
+* When booting the mac, the list of users who can unlock the disk is filtered
+and all users except the disk password are removed.  If there is no disk
+password, the unlock will fail.  The simplest way to create a disk password is
+to run the following command on a decrypted disk:
+`diskutil cs convert / -stdinpassphrase`
 
 License
 ------
