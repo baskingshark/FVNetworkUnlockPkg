@@ -102,7 +102,7 @@ LoadViaLoadFile(IN  EFI_LOAD_FILE_PROTOCOL  *LoadFileProtocol,
                                           DevicePath,
                                           FALSE,
                                           &FileSize,
-                                          Buffer);
+                                          FileBuffer);
   } while(EFI_BUFFER_TOO_SMALL == Status);
 
   if(!EFI_ERROR(Status)) {
