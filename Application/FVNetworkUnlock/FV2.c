@@ -69,6 +69,101 @@ CheckFV2Header(IN CONST UINT8 *Buffer,
 }
 
 /**
+  Read the FV2 Header.
+ 
+  Attempt to read the header for the Core Storage volume.  This could be at the
+  start or the end of the partition, so an attempt is made to read both.
+ 
+  @param  PartitionHandle       Handle to a partition which must support the
+                                Block I/O Protocol.
+  @param  Buffer                If non-NULL, a pointer to where to store the
+                                data read from disk.  It is the callers 
+                                responsibility to free this buffer.
+  @param  BufferSize            If non-NULL, a pointer to where to store the
+                                size of the block read.
+  @param  Location              If non-NULL, a pointer to where to store the
+                                LBA of the header that was read.
+ 
+  @retval EFI_SUCCESS           The Core Storage header was read successfully.
+  @retval EFI_NOT_FOUND         The Core Storage header could not be found.
+  @retval EFI_UNSUPPORTED       The supplied handle does not support the Block
+                                I/O Protocol.
+  @retval EFI_OUT_OF_RESOURCES  There was insufficient memory to allocate a
+                                buffer to hold the Core Storage header.
+  @retval EFI_DEVICE_ERROR      The device reported an error while trying to
+                                perform the read.
+  @retval EFI_NO_MEDIA          There is no media in the device.
+  @retval EFI_MEDIA_CHANGED     The media changed part way through the read.
+ */
+STATIC
+EFI_STATUS
+EFIAPI
+ReadFV2Header(IN  EFI_HANDLE    PartitionHandle,
+              OUT VOID        **Buffer,
+              OUT UINTN        *BufferSize,
+              OUT EFI_LBA      *Location)
+{
+  EFI_BLOCK_IO_PROTOCOL *BlockIO;
+  EFI_BLOCK_IO_MEDIA    *Media = NULL;
+  EFI_STATUS             Status;
+  EFI_LBA                Lba   = 0;
+  VOID                  *Block = NULL;
+  BOOLEAN                Found = FALSE;
+  UINTN                  Idx;
+
+
+  Status = gBS->OpenProtocol(PartitionHandle,
+                             &gEfiBlockIoProtocolGuid,
+                             (VOID**)&BlockIO,
+                             gImageHandle,
+                             NULL,
+                             EFI_OPEN_PROTOCOL_GET_PROTOCOL);
+  if(!EFI_ERROR(Status)) {
+    Media = BlockIO->Media;
+    if(Media->LogicalPartition) {
+      Status = gBS->AllocatePool(EfiBootServicesData,
+                                 Media->BlockSize,
+                                 &Block);
+      if(!EFI_ERROR(Status)) {
+        CONST EFI_LBA LBA[] = { 0, Media->LastBlock };
+        for(Idx = 0; !Found && Idx < sizeof(LBA)/sizeof(LBA[0]); Idx++) {
+          Status = BlockIO->ReadBlocks(BlockIO,
+                                       Media->MediaId,
+                                       Lba = LBA[Idx],
+                                       Media->BlockSize,
+                                       Block);
+          if(!EFI_ERROR(Status))
+            Found = CheckFV2Header(Block, Media->BlockSize);
+          else
+            Print(L"Failed to ReadBlocks - %r\n", Status);
+        }
+      }
+      else
+        Print(L"Failed to AllocatePool - %r\n", Status);
+    }
+  }
+  else
+    Print(L"Failed to Open BLOCK_IO_PROTOCOL - %r\n", Status);
+
+  if(!EFI_ERROR(Status)) {
+    if(Found) {
+      if(Buffer)
+        *Buffer = Block;
+      else
+        if(Block)
+          gBS->FreePool(Block);
+      if(BufferSize)
+        *BufferSize = Media->BlockSize;
+      if(Location)
+        *Location = Lba;
+    }
+    else
+      Status = EFI_NOT_FOUND;
+  }
+  return Status;
+}
+
+/**
   Check whether a partition contains a valid FV2 header.
  
   @param  PartitionHandle   Handle to a partition which must support the Block
@@ -83,45 +178,7 @@ BOOLEAN
 EFIAPI
 CheckFV2Handle(IN EFI_HANDLE PartitionHandle)
 {
-  EFI_BLOCK_IO_PROTOCOL *BlockIO;
-  EFI_BLOCK_IO_MEDIA    *Media;
-  EFI_STATUS             Status;
-  VOID                  *Buffer;
-  BOOLEAN                Result = FALSE;
-
-  Status = gBS->OpenProtocol(PartitionHandle,
-                             &gEfiBlockIoProtocolGuid,
-                             (VOID**)&BlockIO,
-                             gImageHandle,
-                             NULL,
-                             EFI_OPEN_PROTOCOL_GET_PROTOCOL);
-  if(!EFI_ERROR(Status)) {
-    Media = BlockIO->Media;
-    if(Media->LogicalPartition) {
-      Status = gBS->AllocatePool(EfiBootServicesData,
-                                 Media->BlockSize,
-                                 &Buffer);
-      if(!EFI_ERROR(Status)) {
-        Status = BlockIO->ReadBlocks(BlockIO,
-                                     Media->MediaId,
-                                     0,
-                                     Media->BlockSize,
-                                     Buffer);
-        if(!EFI_ERROR(Status)) {
-          Result = CheckFV2Header(Buffer, Media->BlockSize);
-        }
-        else
-          Print(L"Failed to ReadBlocks - %r\n", Status);
-        gBS->FreePool(Buffer);
-      }
-      else
-        Print(L"Failed to AllocatePool - %r\n", Status);
-    }
-  }
-  else
-    Print(L"Failed to Open BLOCK_IO_PROTOCOL - %r\n", Status);
-
-  return Result;
+  return (EFI_SUCCESS == ReadFV2Header(PartitionHandle, NULL, NULL, NULL));
 }
 
 /**
@@ -456,6 +513,7 @@ FreeFV2Volumes(IN UINTN       VolumeCount,
   @retval EFI_BUFFER_TOO_SMALL  The buffer was too small to store the key.
                                 The required size is returned in KeySize.
   @retval EFI_NOT_FOUND         The key could not be found/read.
+  @retval EFI_INVALID_PARAMETER One or more of the parameters are invalid.
  */
 EFI_STATUS
 EFIAPI
@@ -463,47 +521,33 @@ GetXtsAesKey(IN     FV2_VOLUME *FV2Volume,
              IN OUT UINTN      *KeySize,
              IN     UINT8      *Key)
 {
-  EFI_BLOCK_IO_PROTOCOL *Blk;
-  EFI_STATUS             Status;
-  UINTN                  Size;
-  UINTN                  Idx;
-  UINT8                 *BlockBuffer;
+  EFI_STATUS   Status;
+  UINTN        Size;
+  UINT8       *Block;
+  UINTN        BlockSize;
 
-  if(!FV2Volume)
+  if(!FV2Volume || !KeySize || !Key)
     return EFI_INVALID_PARAMETER;
 
-  Status = gBS->OpenProtocol(FV2Volume->CSVolumeHandle,
-                             &gEfiBlockIoProtocolGuid,
-                             (VOID**)&Blk,
-                             gImageHandle,
-                             NULL,
-                             EFI_OPEN_PROTOCOL_GET_PROTOCOL);
-  if(!EFI_ERROR(Status)) {
-    Status = gBS->AllocatePool(EfiBootServicesData,
-                               Blk->Media->BlockSize,
-                               (VOID**)&BlockBuffer);
-    if(!EFI_ERROR(Status)) {
-      Status = Blk->ReadBlocks(Blk,
-                               Blk->Media->MediaId,
-                               0,
-                               Blk->Media->BlockSize,
-                               BlockBuffer);
-      if(!EFI_ERROR(Status)) {
-        // Key Size is at offset 168.
-        // Should always be 16, but use on-disk value just in case.
-        // Size is doubled to account for both keys.
-        Size = (*(UINT32*)(BlockBuffer + 168)) * 2;
-        if(*KeySize >= Size)
-          for(Idx = 0; Idx < Size; Idx++)
-            Key[Idx] = *(BlockBuffer + Idx + 176);
-        else
-          Status = EFI_BUFFER_TOO_SMALL;
-        *KeySize = Size;
-        // Zero buffer ...
-        gBS->SetMem(BlockBuffer, Blk->Media->BlockSize, 0);
-      }
-      gBS->FreePool(BlockBuffer);
-    }
+  Status = ReadFV2Header(FV2Volume->CSVolumeHandle,
+                         (VOID**)&Block,
+                         &BlockSize,
+                         NULL);
+  if(!EFI_ERROR(Status) && BlockSize > 168 + sizeof(UINT32)) {
+    // Key Size is at offset 168.
+    // Should always be 16, but use on-disk value just in case.
+    // Size is doubled to account for both keys.
+    Size = (*(UINT32*)(Block + 168)) * 2;
+    if(*KeySize >= Size && BlockSize > 176 + Size)
+      gBS->CopyMem(Key, Block + 176,  Size);
+    else
+      Status = EFI_BUFFER_TOO_SMALL;
+    *KeySize = Size;
+    // Zero buffer ...
+    gBS->SetMem(Block, BlockSize, 0);
+    gBS->FreePool(Block);
   }
+  else
+    Status = EFI_NOT_FOUND;
   return Status;
 }
