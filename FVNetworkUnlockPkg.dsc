@@ -51,6 +51,7 @@
   #
   AesLib|FVNetworkUnlockPkg/Library/Aes/Aes.inf
   FileSystemHookLib|FVNetworkUnlockPkg/Library/FileSystemHook/FileSystemHook.inf
+  SplashScreenLib|FVNetworkUnlockPkg/Library/SplashScreen/SplashScreen.inf
   #
   # Entry Point Libraries
   #
