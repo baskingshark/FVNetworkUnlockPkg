@@ -246,7 +246,7 @@ ProcessEncRootPlist(IN EFI_FILE_PROTOCOL *File,
   This looks for a replacement efires on the boot volume and, if found, uses
   it as a replacement.
 
-  @param  File      The EFI_FILE_PROTOCOLE for the original file.
+  @param  File      The EFI_FILE_PROTOCOL for the original file.
   @param  FileName  The name of the efires file.
 
   @return A BOOLEAN indicating whether the file was successfuly processed and
@@ -258,32 +258,22 @@ EFIAPI
 ProcessEfires(IN EFI_FILE_PROTOCOL *This,
               IN CHAR16            *FileName)
 {
-  EFI_LOADED_IMAGE_PROTOCOL *Lip;
   EFI_STATUS                 Status;
   CHAR16                    *Start;
   CHAR16                    *Cur;
   UINTN                      FileSize;
   VOID                      *FileData;
 
-  Status = gBS->OpenProtocol(gImageHandle,
-                             &gEfiLoadedImageProtocolGuid,
-                             (VOID**)&Lip,
-                             gImageHandle,
-                             gImageHandle,
-                             EFI_OPEN_PROTOCOL_GET_PROTOCOL);
+  for(Cur = Start = FileName; *Cur; Cur++)
+    if(L'\\' == *Cur)
+      Start = Cur;
+  Status = LoadFileFromBootDevice(Start + 1,
+                                  &FileSize,
+                                  &FileData);
   if(!EFI_ERROR(Status)) {
-    for(Cur = Start = FileName; *Cur; Cur++)
-      if(L'\\' == *Cur)
-        Start = Cur;
-    Status = LoadFile(Lip->DeviceHandle,
-                      Start + 1,
-                      &FileSize,
-                      &FileData);
-    if(!EFI_ERROR(Status)) {
-      Status = CreateFile(This, FileSize, FileData);
-      if(EFI_ERROR(Status))
-        gBS->FreePool(FileData);
-    }
+    Status = CreateFile(This, FileSize, FileData);
+    if(EFI_ERROR(Status))
+      gBS->FreePool(FileData);
   }
   return !EFI_ERROR(Status);
 }

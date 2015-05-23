@@ -93,15 +93,12 @@ SwitchToTextMode(VOID)
 }
 
 /**
-  Load password file from device.
+  Load password file from boot device.
  
-  The password is stored in a file passed on the serial number of the
+  The password is stored in a file based on the serial number of the
   machine (as obtained from the SMBIOS configuration tables).  Any invalid
   characters are replaced with _s)
 
-  @param  DeviceHandle  Handle of the device to read the password file from.
-                        The device must support thethe Simple File System
-                        Protocol or the Load File Protocol.
   @param  FileSize      Where to store the size of the password file.
   @param  FileBuffer    Where to store the pointer to the password data.
 
@@ -119,9 +116,8 @@ SwitchToTextMode(VOID)
  */
 EFI_STATUS
 EFIAPI
-LoadPassword(IN  EFI_HANDLE   DeviceHandle,
-             OUT UINTN       *FileSize,
-             OUT VOID       **FileBuffer)
+LoadPassword(OUT UINTN   *FileSize,
+             OUT VOID   **FileBuffer)
 {
   SMBIOS_STRUCTURE    *Table;
   SMBIOS_TABLE_STRING  SerialNumberId;
@@ -130,7 +126,7 @@ LoadPassword(IN  EFI_HANDLE   DeviceHandle,
   CHAR16              *Filename;
   EFI_STATUS           Status;
 
-  if(!DeviceHandle || !FileSize || !FileBuffer)
+  if(!FileSize || !FileBuffer)
     return EFI_INVALID_PARAMETER;
 
   Status = FindSmBiosTable(1, &Table, &Size);
@@ -156,10 +152,9 @@ LoadPassword(IN  EFI_HANDLE   DeviceHandle,
             Filename[Idx] = L'_';
         }
         // Attempt to load file
-        Status = LoadFile(DeviceHandle,
-                          Filename,
-                          FileSize,
-                          FileBuffer);
+        Status = LoadFileFromBootDevice(Filename,
+                                        FileSize,
+                                        FileBuffer);
         gBS->FreePool(Filename);
       }
     }
@@ -170,7 +165,7 @@ LoadPassword(IN  EFI_HANDLE   DeviceHandle,
 }
 
 /**
-  Load splash screen image from device.
+  Load splash screen image from boot device.
 
   The image is stored in one of the following files:
     * A file based on the serial number of the machine (as obtained from
@@ -178,9 +173,6 @@ LoadPassword(IN  EFI_HANDLE   DeviceHandle,
       characters are replaced with _s)
     * A default file called logo.png
 
-  @param  DeviceHandle  Handle of the device to read the password file from.
-                        The device must support thethe Simple File System
-                        Protocol or the Load File Protocol.
   @param  FileSize      Where to store the size of the password file.
   @param  FileBuffer    Where to store the pointer to the password data.
 
@@ -198,9 +190,8 @@ LoadPassword(IN  EFI_HANDLE   DeviceHandle,
  */
 EFI_STATUS
 EFIAPI
-LoadSplashScreen(IN  EFI_HANDLE   DeviceHandle,
-                 OUT UINTN       *FileSize,
-                 OUT VOID       **FileBuffer)
+LoadSplashScreen(OUT UINTN   *FileSize,
+                 OUT VOID   **FileBuffer)
 {
   SMBIOS_STRUCTURE    *Table;
   SMBIOS_TABLE_STRING  SerialNumberId;
@@ -209,7 +200,7 @@ LoadSplashScreen(IN  EFI_HANDLE   DeviceHandle,
   CHAR16              *Filename;
   EFI_STATUS           Status;
 
-  if(!DeviceHandle || !FileSize || !FileBuffer)
+  if(!FileSize || !FileBuffer)
     return EFI_INVALID_PARAMETER;
 
   Status = FindSmBiosTable(1, &Table, &Size);
@@ -238,10 +229,9 @@ LoadSplashScreen(IN  EFI_HANDLE   DeviceHandle,
                  Filename[Idx] = L'_';
            }
            // Attempt to load file
-           Status = LoadFile(DeviceHandle,
-                             Filename,
-                             FileSize,
-                             FileBuffer);
+           Status = LoadFileFromBootDevice(Filename,
+                                           FileSize,
+                                           FileBuffer);
            gBS->FreePool(Filename);
          }
        }
@@ -249,7 +239,7 @@ LoadSplashScreen(IN  EFI_HANDLE   DeviceHandle,
          Status = EFI_NOT_FOUND;
      }
   if(EFI_NOT_FOUND == Status)
-    Status = LoadFile(DeviceHandle, L"logo.png", FileSize, FileBuffer);
+    Status = LoadFileFromBootDevice(L"logo.png", FileSize, FileBuffer);
 
   return Status;
 }
@@ -270,7 +260,6 @@ UefiMain(IN EFI_HANDLE        ImageHandle,
          IN EFI_SYSTEM_TABLE *SystemTable)
 {
   EFI_STATUS        Status;
-  EFI_LOADED_IMAGE *LoadedImage;
   EFI_HANDLE        LoaderHandle;
   FV2_VOLUME       *Volumes;
   UINTN             VolumeCount;
@@ -280,27 +269,15 @@ UefiMain(IN EFI_HANDLE        ImageHandle,
   VOID             *SplashScreen;
   UINTN             Idx;
 
-  Status = gBS->OpenProtocol(gImageHandle,
-                             &gEfiLoadedImageProtocolGuid,
-                             (VOID**)&LoadedImage,
-                             gImageHandle,
-                             NULL,
-                             EFI_OPEN_PROTOCOL_GET_PROTOCOL);
+  Status = LoadSplashScreen(&SplashScreenSize, &SplashScreen);
   if(!EFI_ERROR(Status)) {
-    Status = LoadSplashScreen(LoadedImage->DeviceHandle,
-                              &SplashScreenSize,
-                              &SplashScreen);
-    if(!EFI_ERROR(Status)) {
-      Status = ShowSplashScreen(SplashScreen, SplashScreenSize);
-      if(EFI_ERROR(Status))
-        Print(L"Failed to show splash screen - %r\n", Status);
-      gBS->FreePool(SplashScreen);
-    }
-    else
-      Print(L"Failed to load splash screen - %r\n", Status);
+    Status = ShowSplashScreen(SplashScreen, SplashScreenSize);
+    if(EFI_ERROR(Status))
+      Print(L"Failed to show splash screen - %r\n", Status);
+    gBS->FreePool(SplashScreen);
   }
   else
-    Print(L"Failed to open LOADED IMAGE PROTOCOL - %r\n", Status);
+    Print(L"Failed to load splash screen - %r\n", Status);
   if(EFI_ERROR(Status))
     SwitchToTextMode();
 
@@ -311,47 +288,35 @@ UefiMain(IN EFI_HANDLE        ImageHandle,
     Print(L"Got %d boot loaders\n", VolumeCount);
     for(Idx = 0; Idx < VolumeCount; Idx++)
       HookVolume(&Volumes[Idx]);
-    Status = gBS->OpenProtocol(gImageHandle,
-                               &gEfiLoadedImageProtocolGuid,
-                               (VOID**)&LoadedImage,
-                               gImageHandle,
-                               NULL,
-                               EFI_OPEN_PROTOCOL_GET_PROTOCOL);
+    Status = LoadPassword(&FileSize, (VOID**)&FileBuffer);
     if(!EFI_ERROR(Status)) {
-      Status = LoadPassword(LoadedImage->DeviceHandle,
-                            &FileSize,
-                            (VOID**)&FileBuffer);
       Print(L"Got %d bytes at %p\n", FileSize, FileBuffer);
+      Status = HookKeyboard(FileBuffer, FileSize);
+      // Erase File Buffer now!
+      SetMem(FileBuffer, FileSize, 0);
+      gBS->FreePool(FileBuffer);
       if(!EFI_ERROR(Status)) {
-        Status = HookKeyboard(FileBuffer, FileSize);
-        // Erase File Buffer now!
-        SetMem(FileBuffer, FileSize, 0);
-        gBS->FreePool(FileBuffer);
+        Status = gBS->LoadImage(FALSE,
+                                gImageHandle,
+                                Volumes[0].BootLoaderDevPath,
+                                NULL,
+                                0,
+                                &LoaderHandle);
         if(!EFI_ERROR(Status)) {
-          Status = gBS->LoadImage(FALSE,
-                                  gImageHandle,
-                                  Volumes[0].BootLoaderDevPath,
-                                  NULL,
-                                  0,
-                                  &LoaderHandle);
-          if(!EFI_ERROR(Status)) {
-            Status = gBS->StartImage(LoaderHandle, NULL, NULL);
-            if(EFI_ERROR(Status))
-              Print(L"Failed to start boot loader - %r\n", Status);
-            gBS->UnloadImage(LoaderHandle);
-          }
-          else
-            Print(L"Failed to load boot loader - %r\n", Status);
-          UnhookKeyboard();
+          Status = gBS->StartImage(LoaderHandle, NULL, NULL);
+          if(EFI_ERROR(Status))
+            Print(L"Failed to start boot loader - %r\n", Status);
+          gBS->UnloadImage(LoaderHandle);
         }
         else
-          Print(L"Failed to create new system table - %r\n", Status);
+          Print(L"Failed to load boot loader - %r\n", Status);
+        UnhookKeyboard();
       }
       else
-        Print(L"Failed to load password file - %r\n", Status);
+        Print(L"Failed to create new system table - %r\n", Status);
     }
     else
-      Print(L"Failed to open LOADED_IMAGE_PROTOCOL - %r\n", Status);
+      Print(L"Failed to load password file - %r\n", Status);
     FreeFV2Volumes(VolumeCount, Volumes);
   }
   else
