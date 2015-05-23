@@ -79,4 +79,14 @@ FindSmBiosString(IN SMBIOS_STRUCTURE     *Struct,
                  IN UINTN                 Size,
                  IN SMBIOS_TABLE_STRING   Index);
 
+/**
+ Get serial number from SMBIOS tables.
+
+ @return A pointer to the serial number string, or NULL if the serial number
+ was not found.
+ */
+CHAR8*
+EFIAPI
+GetSerialNumber();
+
 #endif

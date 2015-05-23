@@ -27,12 +27,10 @@
 
 #include <Uefi.h>
 #include <Library/BaseMemoryLib.h>
-#include <Library/PrintLib.h>
 #include <Library/SplashScreenLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiLib.h>
 #include <Protocol/ConsoleControl.h>
-#include <Protocol/LoadedImage.h>
 #include "FileLoad.h"
 #include "FV2.h"
 #include "FV2Hook.h"
@@ -93,6 +91,46 @@ SwitchToTextMode(VOID)
 }
 
 /**
+  Get a "safe" version of the serial number.
+
+  The serial number, as obtained from the SMBIOS tables, could contain
+  characters that cannot appear in a filename (such as \, /, or :).  These
+  "unsafe" characters are replaced by underscores _.
+ 
+  It is the responsibility of the caller to free the returned string.
+
+  @retval A pointer to a CHAR16 string containing the "sage" version of the
+          serial number, or NULL if the serial number could not be found or
+          a buffer containing the safe version could not be allocated.
+ */
+CHAR16*
+EFIAPI
+GetSafeSerialNumber()
+{
+  CHAR8       *SN;
+  CHAR16      *SN16;
+  UINTN        Length;
+  UINTN        Idx;
+  EFI_STATUS   Status;
+
+  SN = GetSerialNumber();
+  if(SN) {
+    Length = AsciiStrLen(SN);
+    Status = gBS->AllocatePool(EfiBootServicesData,
+                               (Length + 1) * sizeof(CHAR16),
+                               (VOID**)&SN16);
+    if(!EFI_ERROR(Status)) {
+      SN16 = AsciiStrToUnicodeStr(SN, SN16);
+      for(Idx = 0; Idx < Length; Idx++)
+        if(SN16[Idx] == L'\\'|| SN16[Idx] == L'/' || SN16[Idx] == L':')
+          SN16[Idx] = L'_';
+      return SN16;
+    }
+  }
+  return NULL;
+}
+
+/**
   Load password file from boot device.
  
   The password is stored in a file based on the serial number of the
@@ -119,48 +157,22 @@ EFIAPI
 LoadPassword(OUT UINTN   *FileSize,
              OUT VOID   **FileBuffer)
 {
-  SMBIOS_STRUCTURE    *Table;
-  SMBIOS_TABLE_STRING  SerialNumberId;
-  UINTN                Size;
-  CHAR8               *SerialNumber;
-  CHAR16              *Filename;
-  EFI_STATUS           Status;
+  CHAR16      *Filename;
+  EFI_STATUS   Status;
 
   if(!FileSize || !FileBuffer)
     return EFI_INVALID_PARAMETER;
 
-  Status = FindSmBiosTable(1, &Table, &Size);
-  if(!EFI_ERROR(Status) &&
-     Table->Length > (OFFSET_OF(SMBIOS_TABLE_TYPE1, SerialNumber) +
-                      sizeof(SMBIOS_TABLE_STRING))) {
-    SerialNumberId = ((SMBIOS_TABLE_TYPE1*)Table)->SerialNumber;
-    SerialNumber   = FindSmBiosString(Table, Size, SerialNumberId);
-    if(SerialNumber) {
-      Status = gBS->AllocatePool(EfiBootServicesData,
-                                 2 * (AsciiStrLen(SerialNumber) + 1),
-                                 (VOID**)&Filename);
-      if(!EFI_ERROR(Status)) {
-        Filename = AsciiStrToUnicodeStr(SerialNumber, Filename);
-        {
-          UINTN Length;
-          UINTN Idx;
-          Length = StrLen(Filename);
-          for(Idx = 0; Idx < Length; Idx++)
-            if(Filename[Idx] == L'\\'||
-               Filename[Idx] == L'/' ||
-               Filename[Idx] == L':')
-            Filename[Idx] = L'_';
-        }
-        // Attempt to load file
-        Status = LoadFileFromBootDevice(Filename,
-                                        FileSize,
-                                        FileBuffer);
-        gBS->FreePool(Filename);
-      }
-    }
-    else
-      Status = EFI_NOT_FOUND;
+  Filename = GetSafeSerialNumber();
+  if(Filename) {
+    // Attempt to load file
+    Status = LoadFileFromBootDevice(Filename,
+                                    FileSize,
+                                    FileBuffer);
+    gBS->FreePool(Filename);
   }
+  else
+    Status = EFI_NOT_FOUND;
   return Status;
 }
 
@@ -193,54 +205,41 @@ EFIAPI
 LoadSplashScreen(OUT UINTN   *FileSize,
                  OUT VOID   **FileBuffer)
 {
-  SMBIOS_STRUCTURE    *Table;
-  SMBIOS_TABLE_STRING  SerialNumberId;
-  UINTN                Size;
-  CHAR8               *SerialNumber;
-  CHAR16              *Filename;
-  EFI_STATUS           Status;
+  CHAR16      *SerialNumber;
+  CHAR16      *Filename;
+  UINTN        SerialNumberSize;
+  UINTN        Idx;
+  EFI_STATUS   Status;
 
   if(!FileSize || !FileBuffer)
     return EFI_INVALID_PARAMETER;
 
-  Status = FindSmBiosTable(1, &Table, &Size);
-  if(!EFI_ERROR(Status) &&
-     Table->Length > (OFFSET_OF(SMBIOS_TABLE_TYPE1, SerialNumber) +
-                      sizeof(SMBIOS_TABLE_STRING))) {
-       SerialNumberId = ((SMBIOS_TABLE_TYPE1*)Table)->SerialNumber;
-       SerialNumber   = FindSmBiosString(Table, Size, SerialNumberId);
-       if(SerialNumber) {
-         Status = gBS->AllocatePool(EfiBootServicesData,
-                                    2 * (AsciiStrLen(SerialNumber) + 5),
-                                    (VOID**)&Filename);
-         if(!EFI_ERROR(Status)) {
-           (VOID) UnicodeSPrint(Filename,
-                                2 * (AsciiStrLen(SerialNumber) + 5),
-                                L"%a.png",
-                                SerialNumber);
-           {
-             UINTN Length;
-             UINTN Idx;
-             Length = StrLen(Filename);
-             for(Idx = 0; Idx < Length; Idx++)
-               if(Filename[Idx] == L'\\'||
-                  Filename[Idx] == L'/' ||
-                  Filename[Idx] == L':')
-                 Filename[Idx] = L'_';
-           }
-           // Attempt to load file
-           Status = LoadFileFromBootDevice(Filename,
-                                           FileSize,
-                                           FileBuffer);
-           gBS->FreePool(Filename);
-         }
-       }
-       else
-         Status = EFI_NOT_FOUND;
-     }
-  if(EFI_NOT_FOUND == Status)
+  SerialNumber = GetSafeSerialNumber();
+  if(SerialNumber) {
+    SerialNumberSize = StrLen(SerialNumber);
+    Status = gBS->AllocatePool(EfiBootServicesData,
+                               (SerialNumberSize + 5) * sizeof(CHAR16),
+                               (VOID**)&Filename);
+    if(!EFI_ERROR(Status)) {
+      for(Idx = 0; Idx < SerialNumberSize; Idx++)
+        Filename[Idx] = SerialNumber[Idx];
+      Filename[Idx++] = L'.';
+      Filename[Idx++] = L'p';
+      Filename[Idx++] = L'n';
+      Filename[Idx++] = L'g';
+      Filename[Idx++] = 0;
+      // Attempt to load file
+      Status = LoadFileFromBootDevice(Filename,
+                                      FileSize,
+                                      FileBuffer);
+      gBS->FreePool(Filename);
+    }
+    gBS->FreePool(SerialNumber);
+  }
+  else
+    Status = EFI_NOT_FOUND;
+  if(EFI_ERROR(Status))
     Status = LoadFileFromBootDevice(L"logo.png", FileSize, FileBuffer);
-
   return Status;
 }
 

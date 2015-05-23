@@ -236,3 +236,35 @@ FindSmBiosString(IN SMBIOS_STRUCTURE     *Struct,
   }
   return Result;
 }
+
+/**
+  Minimum size of a type 1 SMBIOS table if it contains a SerialNumber field.
+ */
+#define MIN_TYPE1_WITH_SN \
+  (OFFSET_OF(SMBIOS_TABLE_TYPE1, SerialNumber) + sizeof(SMBIOS_TABLE_STRING))
+
+/**
+  Get serial number from SMBIOS tables.
+
+  @return A pointer to the serial number string, or NULL if the serial number
+          was not found.
+*/
+CHAR8*
+EFIAPI
+GetSerialNumber()
+{
+  SMBIOS_STRUCTURE    *Table;
+  SMBIOS_TABLE_STRING  SerialNumberId;
+  UINTN                Size;
+  CHAR8               *SerialNumber;
+  EFI_STATUS           Status;
+
+  Status = FindSmBiosTable(1, &Table, &Size);
+  if(!EFI_ERROR(Status) && Table->Length > MIN_TYPE1_WITH_SN) {
+    SerialNumberId = ((SMBIOS_TABLE_TYPE1*)Table)->SerialNumber;
+    SerialNumber   = FindSmBiosString(Table, Size, SerialNumberId);
+  }
+  else
+    SerialNumber = NULL;
+  return SerialNumber;
+}
