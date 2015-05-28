@@ -37,7 +37,7 @@
 
 [Sources]
   SplashScreen.c
-  libpng/compat.c
+  compat.c
   libpng/png.c
   libpng/pngerror.c
   libpng/pngget.c
