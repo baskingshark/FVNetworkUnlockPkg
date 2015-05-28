@@ -1,0 +1,83 @@
+The SplashScreen library is designed to allow any PNG file to be used as the
+source for a splash screen.
+
+PNG support is provided by a libpng (http://www.libpng.org/pub/png/libpng.h).
+The version here is based on version 1.6.17 and is stripped down to only include
+basic read support.  Patches to the core files are in libpng.patch.  Additional
+library code needed by libpng but not provided by EDK is defined in limits.h,
+setjmp.h, stddef.h, stdlib.h, string.h and windows.h.  The actual implementation
+of these is in compat.c.  The unneeded files, listed below, have been removed:
+  ANNOUNCE
+  CHANGES
+  CMakeLists.txt
+  INSTALL
+  Makefile.am
+  TODO
+  arm/*
+  autogen.sh
+  configure.ac
+  contrib/*
+  example.c
+  libpng-config.in
+  libpng-manual.txt
+  libpng.3
+  libpng.pc.in
+  libpngpf.3
+  png.5
+  pngbar.jpg
+  pngbar.png
+  pngnow.png
+  pngtest.c
+  pngtest.png
+  pngusr.dfa
+  pngwio.c
+  pngwrite.c
+  pngwtran.c
+  pngwutil.c
+  projects/*
+  scripts/*
+  tests/*
+
+Decompression support is provided by zlib (http://zlib.net).  The version here
+is based on version 1.2.8 and is stripped down to only support decompression.
+Patches to the core files are in zlib.patch.  The unneeded files, listed below,
+have been removed:
+  CMakeLists.txt
+  ChangeLog
+  FAQ
+  INDEX
+  Makefile
+  Makefile.in
+  amiga/*
+  as400/*
+  compress.c
+  configure
+  contrib/*
+  deflate.c
+  deflate.h
+  doc/*
+  examples/*
+  gzclose.c
+  gzguts.h
+  gzlib.c
+  gzread.c
+  gzwrite.c
+  make_vms.com
+  msdos/*
+  nintendods/*
+  old/*
+  qnx/*
+  test/*
+  treebuild.xml
+  trees.c
+  trees.h
+  watcom/*
+  win32/*
+  zconf.h.cmakein
+  zconf.h.in
+  zlib.3
+  zlib.3.pdf
+  zlib.map
+  zlib.pc.cmakein
+  zlib.pc.in
+  zlib2ansi
