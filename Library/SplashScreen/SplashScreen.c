@@ -246,7 +246,8 @@ InfoCallback(png_structp  png_ptr,
   IMAGE_INFO   *Info;
   VOID         *Buffer;
   EFI_STATUS    Status;
-  png_color_16p Background;
+  png_color_16  Background;
+  png_color_16p BackgroundPtr;
   png_uint_32   ImageWidth;
   png_uint_32   ImageHeight;
   png_size_t    RowBytes;
@@ -276,21 +277,22 @@ InfoCallback(png_structp  png_ptr,
   (VOID) png_set_interlace_handling(png_ptr);
   // Have to extract info about background here as
   // png_set_background_fixed must be called before png_read_update_info.
-  if(!png_get_bKGD(png_ptr, info_ptr, &Background))
+  if(!png_get_bKGD(png_ptr, info_ptr, &BackgroundPtr))
   {
     // Set default background to black
-    Background->blue  = 0;
-    Background->gray  = 0;
-    Background->green = 0;
-    Background->index = 0;
-    Background->red   = 0;
+    Background.blue  = 0;
+    Background.gray  = 0;
+    Background.green = 0;
+    Background.index = 0;
+    Background.red   = 0;
+    BackgroundPtr    = &Background;
   }
-  Info->BackgroundGop.Blue     = Background->blue;
-  Info->BackgroundGop.Green    = Background->green;
-  Info->BackgroundGop.Red      = Background->red;
+  Info->BackgroundGop.Blue     = BackgroundPtr->blue;
+  Info->BackgroundGop.Green    = BackgroundPtr->green;
+  Info->BackgroundGop.Red      = BackgroundPtr->red;
   Info->BackgroundGop.Reserved = 0;
   png_set_background_fixed(png_ptr,
-                           Background,
+                           BackgroundPtr,
                            PNG_BACKGROUND_GAMMA_SCREEN,
                            1,
                            10000 /* Gamma of 1.0 */);
