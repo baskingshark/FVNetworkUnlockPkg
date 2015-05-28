@@ -329,7 +329,7 @@ RowCallback(png_structp   png_ptr,
   Print(L"Row Callback: %d\n", row_num);
   Info = png_get_progressive_ptr(png_ptr);
   if(Info && Info->Image) {
-    png_bytep RowStart = (png_bytep)(Info->ImageUga +
+    png_bytep RowStart = (png_bytep)(Info->ImageGop +
                                      row_num * Info->ImageWidth);
     png_progressive_combine_row(png_ptr,
                                 RowStart,
