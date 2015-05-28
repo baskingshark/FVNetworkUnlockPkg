@@ -326,7 +326,6 @@ RowCallback(png_structp   png_ptr,
   IMAGE_INFO *Info;
   if(!new_row)
     return;
-  Print(L"Row Callback: %d\n", row_num);
   Info = png_get_progressive_ptr(png_ptr);
   if(Info && Info->Image) {
     png_bytep RowStart = (png_bytep)(Info->ImageGop +
