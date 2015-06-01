@@ -159,7 +159,7 @@ struct _FIXED_KEY_STATE_PROTOCOL {
 #define TIMER_MS(x) ((x)*10000UL)
 #define DOWN_TIME   TIMER_MS(20)
 #define UP_TIME     TIMER_MS(20)
-#define IGNORE_TIME TIMER_MS(2500)
+#define IGNORE_TIME TIMER_MS(3000)
 
 /**
   Read from virtual keyboard.
