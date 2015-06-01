@@ -266,13 +266,14 @@ InfoCallback(png_structp  png_ptr,
                NULL           // filter_type
                );
   /*
-   * Transforms ... convert everthing to 8-bit BGRA (as used by GOP/UGA) and
+   * Transforms ... convert everthing to 8-bit BGRx (as used by GOP/UGA) and
    * enable interlace handling.
    */
   png_set_gray_to_rgb(png_ptr);
   png_set_palette_to_rgb(png_ptr);
   png_set_expand(png_ptr);
   png_set_scale_16(png_ptr);
+  png_set_filler(png_ptr, 0, PNG_FILLER_AFTER);
   png_set_bgr(png_ptr);
   (VOID) png_set_interlace_handling(png_ptr);
   // Have to extract info about background here as
