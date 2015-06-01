@@ -158,7 +158,7 @@ HookKeyState(IN CONST CHAR8 *Data,
         }
         else {
           Print(L"Failed to ReinstallProtocolInterface - %r\n", Status);
-          // Delete FixedKeyState
+          FreeFixedKeyState(NewKeyState);
         }
       }
       else
