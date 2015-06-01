@@ -45,6 +45,12 @@
       MSFT:*_*_*_CC_FLAGS = /DSPLASH_SCREEN_DELAY=$(SPLASH_SCREEN_DELAY)
       INTEL:*_*_*_CC_FLAGS = /DSPLASH_SCREEN_DELAY=$(SPLASH_SCREEN_DELAY)
 !endif
+!ifdef BOOT_VERBOSE
+    <BuildOptions>
+      GCC:*_*_*_CC_FLAGS = -DBOOT_VERBOSE
+      MSFT:*_*_*_CC_FLAGS = /DBOOT_VERBOSE
+      INTEL:*_*_*_CC_FLAGS = /DBOOT_VERBOSE
+!endif
   }
 !ifdef OPTIONAL
   FVNetworkUnlockPkg/Application/KeyState/KeyState.inf

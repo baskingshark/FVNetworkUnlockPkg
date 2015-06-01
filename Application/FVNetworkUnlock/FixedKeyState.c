@@ -199,9 +199,20 @@ ReadKeyState(IN     KEY_STATE_PROTOCOL *This,
   // Handle first check ... called by boot loader to check for special keys
   if(KEY_FIRST == FixedKey->KeyState) {
     // For now, do nothing.
-    *Modifiers = KEY_STATE_MOD_LEFT_COMMAND | KEY_STATE_MOD_RIGHT_COMMAND;
-    *KeyCount  = 1;
-    *Keys      = KEY_STATE_V;
+#ifdef BOOT_VERBOSE
+    if(!*KeyCount) {
+      *KeyCount = 1;
+      return EFI_BUFFER_TOO_SMALL;
+    }
+    else {
+      *Modifiers = KEY_STATE_MOD_LEFT_COMMAND | KEY_STATE_MOD_RIGHT_COMMAND;
+      *KeyCount  = 1;
+      *Keys      = KEY_STATE_V;
+    }
+#else
+    *Modifiers = 0;
+    *KeyCount  = 0;
+#endif
     FixedKey->KeyState = (gBS->SetTimer(FixedKey->Timer,
                                         TimerRelative,
                                         IGNORE_TIME) ? KEY_IDLE : KEY_UP);
