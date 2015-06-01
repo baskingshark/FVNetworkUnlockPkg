@@ -38,7 +38,14 @@
   SKUID_IDENTIFIER               = DEFAULT
 
 [Components]
-  FVNetworkUnlockPkg/Application/FVNetworkUnlock/FVNetworkUnlock.inf
+  FVNetworkUnlockPkg/Application/FVNetworkUnlock/FVNetworkUnlock.inf {
+!ifdef SPLASH_SCREEN_DELAY
+    <BuildOptions>
+      GCC:*_*_*_CC_FLAGS = -DSPLASH_SCREEN_DELAY=$(SPLASH_SCREEN_DELAY)
+      MSFT:*_*_*_CC_FLAGS = /DSPLASH_SCREEN_DELAY=$(SPLASH_SCREEN_DELAY)
+      INTEL:*_*_*_CC_FLAGS = /DSPLASH_SCREEN_DELAY=$(SPLASH_SCREEN_DELAY)
+!endif
+  }
 !ifdef OPTIONAL
   FVNetworkUnlockPkg/Application/KeyState/KeyState.inf
   FVNetworkUnlockPkg/Application/AesTest/AesTest.inf

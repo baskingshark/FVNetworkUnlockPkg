@@ -243,6 +243,10 @@ LoadSplashScreen(OUT UINTN   *FileSize,
   return Status;
 }
 
+/* Default time to display splash screen */
+#ifndef SPLASH_SCREEN_DELAY
+#define SPLASH_SCREEN_DELAY 2500000
+#endif
 
 /**
   The entry point for the application.
@@ -273,6 +277,8 @@ UefiMain(IN EFI_HANDLE        ImageHandle,
     Status = ShowSplashScreen(SplashScreen, SplashScreenSize);
     if(EFI_ERROR(Status))
       Print(L"Failed to show splash screen - %r\n", Status);
+    else
+      gBS->Stall(SPLASH_SCREEN_DELAY);
     gBS->FreePool(SplashScreen);
   }
   else
